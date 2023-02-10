@@ -1,0 +1,22 @@
+# LAYER_CONF_VERSION is increased each time build/conf/bblayers.conf
+# changes incompatibly
+LCONF_VERSION = "14"
+
+BBPATH = "${TOPDIR}"
+BBFILES ?= ""
+
+BBLAYERS ?= " \
+  ##OEROOT##/meta \
+  ##OEROOT##/meta-poky \
+  ##OEROOT##/meta-openembedded/meta-oe \
+  ##OEROOT##/meta-openembedded/meta-networking \
+  ##OEROOT##/meta-openembedded/meta-perl \
+  ##OEROOT##/meta-openembedded/meta-python \
+  ##OEROOT##/meta-phosphor \
+  ##OEROOT##/meta-intel-fpga \
+  ##OEROOT##/meta-openbmc-mods \
+  ##OEROOT##/meta-intel-openbmc \
+  ##OEROOT##/meta-openbmc-mods/meta-common \
+  ##OEROOT##/meta-openbmc-mods/meta-runbmc-cyclone5 \
+  ##OEROOT##/meta-security \
+  "

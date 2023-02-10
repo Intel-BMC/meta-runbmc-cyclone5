@@ -1,0 +1,12 @@
+# short-description: Create MMC OpenBMC image for Intel RunBMC module
+# long-description: Create MMC OpenBMC image for Intel RunBMC module based on CycloneV SoC
+# Partition layout:
+#  - 128kB reserved for u-boot-env, aligned to GPT size
+#  - u-boot
+#  - kernel
+#  - rootfs
+
+part --ondisk mmcblk --no-table --align 17 --fixed-size 128k
+part --source rawcopy --sourceparams="file=u-boot-with-spl.sfp" --ondisk mmcblk --system-id=a2 --align 4 --fixed-size 1M
+part --source bootimg-partition --ondisk mmcblk --fstype=vfat --label boot --active --align 4 --size 16
+part / --source rootfs --ondisk mmcblk --fstype=ext4 --label root --align 4

@@ -1,0 +1,113 @@
+From 32aa57aca3707c44700f9d099d1a163049e70972 Mon Sep 17 00:00:00 2001
+From: Justin Ledford <justinledford@google.com>
+Date: Mon, 29 Aug 2022 19:59:30 +0000
+Subject: [PATCH] hwmon: (max31790) add fanN_enable
+
+The MAX31790 has a tach input enable bit in each fan's configuration
+register. This is only enabled by the driver if RPM mode is selected,
+but the driver doesn't provide a way to independently enable tachometer
+input regardless of the regulator mode.
+
+By adding the fanN_enable sysfs files, we can decouple the tach input
+from the regulator mode. Also update the documentation.
+
+Signed-off-by: Justin Ledford <justinledford@google.com>
+Link: https://lore.kernel.org/r/20220829195930.2521755-1-justinledford@google.com
+Signed-off-by: Guenter Roeck <linux@roeck-us.net>
+---
+ Documentation/hwmon/max31790.rst |  1 +
+ drivers/hwmon/max31790.c         | 38 ++++++++++++++++++++++++++------
+ 2 files changed, 32 insertions(+), 7 deletions(-)
+
+diff --git a/Documentation/hwmon/max31790.rst b/Documentation/hwmon/max31790.rst
+index 7b097c3b9b90..33c5c7330efc 100644
+--- a/Documentation/hwmon/max31790.rst
++++ b/Documentation/hwmon/max31790.rst
+@@ -38,6 +38,7 @@ Sysfs entries
+ fan[1-12]_input    RO  fan tachometer speed in RPM
+ fan[1-12]_fault    RO  fan experienced fault
+ fan[1-6]_target    RW  desired fan speed in RPM
++fan[1-6]_enable    RW  enable or disable the tachometer input
+ pwm[1-6]_enable    RW  regulator mode, 0=disabled (duty cycle=0%), 1=manual mode, 2=rpm mode
+ pwm[1-6]           RW  read: current pwm duty cycle,
+                        write: target pwm duty cycle (0-255)
+diff --git a/drivers/hwmon/max31790.c b/drivers/hwmon/max31790.c
+index 7e9362f6dc29..20bf5ffadefe 100644
+--- a/drivers/hwmon/max31790.c
++++ b/drivers/hwmon/max31790.c
+@@ -202,6 +202,9 @@ static int max31790_read_fan(struct device *dev, u32 attr, int channel,
+ 		}
+ 		mutex_unlock(&data->update_lock);
+ 		return 0;
++	case hwmon_fan_enable:
++		*val = !!(data->fan_config[channel] & MAX31790_FAN_CFG_TACH_INPUT_EN);
++		return 0;
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -214,7 +217,7 @@ static int max31790_write_fan(struct device *dev, u32 attr, int channel,
+ 	struct i2c_client *client = data->client;
+ 	int target_count;
+ 	int err = 0;
+-	u8 bits;
++	u8 bits, fan_config;
+ 	int sr;
+ 
+ 	mutex_lock(&data->update_lock);
+@@ -243,6 +246,23 @@ static int max31790_write_fan(struct device *dev, u32 attr, int channel,
+ 					MAX31790_REG_TARGET_COUNT(channel),
+ 					data->target_count[channel]);
+ 		break;
++	case hwmon_fan_enable:
++		fan_config = data->fan_config[channel];
++		if (val == 0) {
++			fan_config &= ~MAX31790_FAN_CFG_TACH_INPUT_EN;
++		} else if (val == 1) {
++			fan_config |= MAX31790_FAN_CFG_TACH_INPUT_EN;
++		} else {
++			err = -EINVAL;
++			break;
++		}
++		if (fan_config != data->fan_config[channel]) {
++			err = i2c_smbus_write_byte_data(client, MAX31790_REG_FAN_CONFIG(channel),
++							fan_config);
++			if (!err)
++				data->fan_config[channel] = fan_config;
++		}
++		break;
+ 	default:
+ 		err = -EOPNOTSUPP;
+ 		break;
+@@ -270,6 +290,10 @@ static umode_t max31790_fan_is_visible(const void *_data, u32 attr, int channel)
+ 		    !(fan_config & MAX31790_FAN_CFG_TACH_INPUT))
+ 			return 0644;
+ 		return 0;
++	case hwmon_fan_enable:
++		if (channel < NR_CHANNEL)
++			return 0644;
++		return 0;
+ 	default:
+ 		return 0;
+ 	}
+@@ -423,12 +447,12 @@ static umode_t max31790_is_visible(const void *data,
+ 
+ static const struct hwmon_channel_info *max31790_info[] = {
+ 	HWMON_CHANNEL_INFO(fan,
+-			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT,
+-			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT,
+-			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT,
+-			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT,
+-			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT,
+-			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT | HWMON_F_ENABLE,
++			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT | HWMON_F_ENABLE,
++			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT | HWMON_F_ENABLE,
++			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT | HWMON_F_ENABLE,
++			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT | HWMON_F_ENABLE,
++			   HWMON_F_INPUT | HWMON_F_TARGET | HWMON_F_FAULT | HWMON_F_ENABLE,
+ 			   HWMON_F_INPUT | HWMON_F_FAULT,
+ 			   HWMON_F_INPUT | HWMON_F_FAULT,
+ 			   HWMON_F_INPUT | HWMON_F_FAULT,
+-- 
+2.25.1
+

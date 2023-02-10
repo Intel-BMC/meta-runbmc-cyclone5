@@ -1,0 +1,40 @@
+From ad3d9a4abcb6d3e61fe3cb5ea1cc8b2cb1d4a1b6 Mon Sep 17 00:00:00 2001
+From: Jan Sowinski <jan.sowinski@intel.com>
+Date: Fri, 9 Dec 2022 13:47:56 +0100
+Subject: [PATCH] disable zlib and gzip
+
+zlib is not required for current configuration and has vulnerabilities.
+Hence disabling zlib along with gzip which requires it.
+
+Signed-off-by: Jan Sowinski <jan.sowinski@intel.com>
+---
+ lib/Kconfig | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/lib/Kconfig b/lib/Kconfig
+index 3c6fa99b1a..2369db46d5 100644
+--- a/lib/Kconfig
++++ b/lib/Kconfig
+@@ -580,7 +580,7 @@ config LZO
+ config GZIP
+ 	bool "Enable gzip decompression support"
+ 	select ZLIB
+-	default y
++	default n
+ 	help
+ 	  This enables support for GZIP compression algorithm.
+ 
+@@ -601,8 +601,8 @@ config BZIP2
+ 	  This enables support for BZIP2 compression algorithm.
+ 
+ config ZLIB
+-	bool
+-	default y
++	bool "Enable ZLIB compression lib"
++	default n
+ 	help
+ 	  This enables ZLIB compression lib.
+ 
+-- 
+2.25.1
+

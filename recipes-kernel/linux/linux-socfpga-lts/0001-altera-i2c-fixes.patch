@@ -1,0 +1,52 @@
+From 1947a6126a1fa10ef9a0f40432ec2f67441206fd Mon Sep 17 00:00:00 2001
+From: Jan Sowinski <jan.sowinski@intel.com>
+Date: Fri, 5 Oct 2018 11:11:20 +0200
+Subject: [PATCH] altera i2c timeouts on NACK
+
+On NACK additional byte was sent combined with stop condition which
+resulted in IP core not being in required IDLE state.
+IP core itself sends stop condition on NACK during address or TX phase.
+---
+ drivers/i2c/busses/i2c-altera.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-altera.c b/drivers/i2c/busses/i2c-altera.c
+index f5e1941..6009b9d 100644
+--- a/drivers/i2c/busses/i2c-altera.c
++++ b/drivers/i2c/busses/i2c-altera.c
+@@ -272,7 +272,6 @@ static irqreturn_t altr_i2c_isr(int irq, void *_dev)
+ 		dev_dbg(idev->dev, "Could not get ACK\n");
+ 		idev->msg_err = -ENXIO;
+ 		altr_i2c_int_clear(idev, ALTR_I2C_ISR_NACK);
+-		altr_i2c_stop(idev);
+ 		finish = true;
+ 	} else if (read && unlikely(status & ALTR_I2C_ISR_RXOF)) {
+ 		/* handle RX FIFO Overflow */
+-- 
+2.7.4
+
+From 38a6f2fa735c8e6fb2feffc01cd0f2180cc49ecc Mon Sep 17 00:00:00 2001
+From: Jan Sowinski <jan.sowinski@intel.com>
+Date: Wed, 6 Mar 2019 13:55:02 +0100
+Subject: [PATCH] I2C altera unblock 1MHz
+
+---
+ drivers/i2c/busses/i2c-altera.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-altera.c b/drivers/i2c/busses/i2c-altera.c
+index df8915d77b77..877133f761df 100644
+--- a/drivers/i2c/busses/i2c-altera.c
++++ b/drivers/i2c/busses/i2c-altera.c
+@@ -422,7 +422,7 @@ static int altr_i2c_probe(struct platform_device *pdev)
+ 		idev->bus_clk_rate = I2C_MAX_STANDARD_MODE_FREQ;	/* default clock rate */
+ 	}
+ 
+-	if (idev->bus_clk_rate > I2C_MAX_FAST_MODE_FREQ) {
++	if (idev->bus_clk_rate > I2C_MAX_FAST_MODE_PLUS_FREQ) {
+ 		dev_err(&pdev->dev, "invalid clock-frequency %d\n",
+ 			idev->bus_clk_rate);
+ 		return -EINVAL;
+-- 
+2.25.1
+
