@@ -1,6 +1,6 @@
 MACHINE ??= "runbmc-cyclone5"
 DISTRO ?= "openbmc-phosphor"
-PACKAGE_CLASSES ?= "package_rpm"
+PACKAGE_CLASSES ?= "package_ipk"
 SANITY_TESTED_DISTROS:append ?= " RedHatEnterpriseWorkstation-6.*"
 EXTRA_IMAGE_FEATURES = "validation-unsecure"
 # Uncomment the following line to enable debug features / default user account.
@@ -36,3 +36,6 @@ FULL_OPTIMIZATION = "-Os -pipe ${DEBUG_FLAGS}"
 # Once enabled, run 'bitbake intel-platforms --runonly print_src'
 # on a clean workspace to get the output
 #INHERIT += "print-src"
+
+# build only sgdisk from gptfdisk recipe, cgdisk is not needed
+PACKAGECONFIG:pn-gptfdisk ?= "popt"

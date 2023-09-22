@@ -591,6 +591,12 @@
 			interrupts = <0 175 4>;
 		};
 
+		socfpga_axi_setup: stmmac-axi-config {
+			snps,wr_osr_lmt = <0xf>;
+			snps,rd_osr_lmt = <0xf>;
+			snps,blen = <0 0 0 0 16 0 0>;
+		};
+
 		gmac0: ethernet@ff700000 {
 			compatible = "altr,socfpga-stmmac", "snps,dwmac-3.70a", "snps,dwmac";
 			altr,sysmgr-syscon = <&sysmgr 0x60 0>;
@@ -606,6 +612,7 @@
 			snps,perfect-filter-entries = <128>;
 			tx-fifo-depth = <4096>;
 			rx-fifo-depth = <4096>;
+			snps,axi-config = <&socfpga_axi_setup>;
 			status = "okay";
 			/*
 			 * Using MII-to-RMII SoftIP converter, hence from EMAC
@@ -634,6 +641,7 @@
 			snps,perfect-filter-entries = <128>;
 			tx-fifo-depth = <4096>;
 			rx-fifo-depth = <4096>;
+			snps,axi-config = <&socfpga_axi_setup>;
 			status = "okay";
 			phy-mode = "rgmii-id";
 			txd0-skew-ps = <0>;
@@ -653,6 +661,7 @@
 			clocks = <&l4_mp_clk>;
 			status = "okay";
 
+			/* porta[0..28] -> hps_gpio[0..28] */
 			porta: gpio-controller@0 {
 				compatible = "snps,dw-apb-gpio-port";
 				gpio-controller;
@@ -678,8 +687,9 @@
 			compatible = "snps,dw-apb-gpio";
 			reg = <0xff709000 0x1000>;
 			clocks = <&l4_mp_clk>;
-			status = "disabled";
+			status = "okay";
 
+			/* portb[0..28] -> hps_gpio[29..57] */
 			portb: gpio-controller@0 {
 				compatible = "snps,dw-apb-gpio-port";
 				gpio-controller;
@@ -698,8 +708,12 @@
 			compatible = "snps,dw-apb-gpio";
 			reg = <0xff70a000 0x1000>;
 			clocks = <&l4_mp_clk>;
-			status = "disabled";
+			status = "okay";
 
+			/*
+			 * portc[0..8] -> hps_gpio[58..66]
+			 * portc[13..26] -> hps_gpi[0..13]
+			 */
 			portc: gpio-controller@0 {
 				compatible = "snps,dw-apb-gpio-port";
 				gpio-controller;
@@ -1024,7 +1038,7 @@
 			interrupt-parent = < &intc >;
 			interrupts = < 0 40 1 >;
 			clocks = < &sys_pll_outclk0 >;
-			altr,gpio-bank-width = < 32 >;
+			altr,ngpio = < 32 >;
 			altr,interrupt-type = < 3 >;
 			#gpio-cells = < 2 >;
 			gpio-controller;
@@ -1036,7 +1050,7 @@
 			interrupt-parent = < &intc >;
 			interrupts = < 0 41 1 >;
 			clocks = < &sys_pll_outclk0 >;
-			altr,gpio-bank-width = < 8 >;
+			altr,ngpio = < 8 >;
 			altr,interrupt-type = < 3 >;
 			#gpio-cells = < 2 >;
 			gpio-controller;
@@ -1193,16 +1207,4 @@
 		device_type = "memory";
 		reg = <0x0 0x40000000>; /* 1GB */
 	};
-
-	reserved-memory {
-		#address-cells = < 0x01 >;
-		#size-cells = < 0x01 >;
-		ranges;
-
-		/* shared memory over PCie for host frame buffer */
-		framebuffer@3f000000 {
-			reg = < 0x3f000000 0x1000000 >; /* last 16MB */
-                };
-	};
-
 };

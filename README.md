@@ -29,3 +29,24 @@ export TEMPLATECONF=meta-openbmc-mods/meta-runbmc-cyclone5/conf/templates/defaul
 source ./oe-init-build-env
 bitbake intel-platforms
 ```
+
+# Build artifacts
+OnChip Memory initialization file for CycloneV Quartus project:
+```
+u-boot-spl.mif
+```
+
+---
+eMMC provisioning files over TFTP using `mmc-factory-init` u-boot macro:
+```
+u-boot.img
+image-kernel.ext4
+image-rofs.ext4
+```
+`u-boot.img` is additionally awaited by SPL over YMODEM serial protocol when eMMC boot partition is not programmed.
+
+---
+Tarball for firmware update over Redfish or WebUI:
+```
+intel-platforms-runbmc-cyclone5.ext4.mmc.tar
+```

@@ -1,23 +1,24 @@
-From cbebd116ebf76d1e4358096cfc21c7547919869f Mon Sep 17 00:00:00 2001
+From 31ec64829387a515f6668a9081d0c8a3a7baff50 Mon Sep 17 00:00:00 2001
 From: Jan Sowinski <jan.sowinski@intel.com>
 Date: Mon, 18 Jan 2021 10:18:55 +0000
 Subject: [PATCH 1/2] CycloneV RunBMC board support added
 
 ---
  arch/arm/dts/Makefile                         |   1 +
- .../dts/socfpga_cyclone5_runbmc-u-boot.dtsi   |  39 ++
+ .../dts/socfpga_cyclone5_runbmc-u-boot.dtsi   |  39 +
  arch/arm/dts/socfpga_cyclone5_runbmc.dts      |  82 +++
  arch/arm/mach-socfpga/Kconfig                 |   7 +
  board/intel/cyclone5-runbmc/MAINTAINERS       |   5 +
  board/intel/cyclone5-runbmc/Makefile          |   7 +
- .../intel/cyclone5-runbmc/qts/iocsr_config.h  | 659 ++++++++++++++++++
- .../intel/cyclone5-runbmc/qts/pinmux_config.h | 218 ++++++
- board/intel/cyclone5-runbmc/qts/pll_config.h  |  84 +++
- .../intel/cyclone5-runbmc/qts/sdram_config.h  | 345 +++++++++
+ .../intel/cyclone5-runbmc/qts/iocsr_config.h  | 664 ++++++++++++++++++
+ .../intel/cyclone5-runbmc/qts/pinmux_config.h | 222 ++++++
+ board/intel/cyclone5-runbmc/qts/pll_config.h  |  86 +++
+ .../intel/cyclone5-runbmc/qts/sdram_config.h  | 349 +++++++++
  board/intel/cyclone5-runbmc/socfpga.c         |   5 +
- configs/socfpga_cyclone5_runbmc_defconfig     |  84 +++
+ configs/socfpga_cyclone5_runbmc_defconfig     | 115 +++
  drivers/net/dwmac_socfpga.c                   |   3 +
- 13 files changed, 1539 insertions(+)
+ include/configs/socfpga_cyclone5_runbmc.h     |  91 +++
+ 14 files changed, 1676 insertions(+)
  create mode 100644 arch/arm/dts/socfpga_cyclone5_runbmc-u-boot.dtsi
  create mode 100644 arch/arm/dts/socfpga_cyclone5_runbmc.dts
  create mode 100644 board/intel/cyclone5-runbmc/MAINTAINERS
@@ -28,12 +29,13 @@ Subject: [PATCH 1/2] CycloneV RunBMC board support added
  create mode 100644 board/intel/cyclone5-runbmc/qts/sdram_config.h
  create mode 100644 board/intel/cyclone5-runbmc/socfpga.c
  create mode 100644 configs/socfpga_cyclone5_runbmc_defconfig
+ create mode 100644 include/configs/socfpga_cyclone5_runbmc.h
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index 8223c11c44..39729b08de 100644
+index 62d48b4a45..2900f70c1c 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -376,6 +376,7 @@ dtb-$(CONFIG_ARCH_SOCFPGA) +=				\
+@@ -446,6 +446,7 @@ dtb-$(CONFIG_ARCH_SOCFPGA) +=				\
  	socfpga_cyclone5_mcvevk.dtb			\
  	socfpga_cyclone5_is1.dtb			\
  	socfpga_cyclone5_socdk.dtb			\
@@ -175,10 +177,10 @@ index 0000000000..717e52a064
 +	status = "okay";
 +};
 diff --git a/arch/arm/mach-socfpga/Kconfig b/arch/arm/mach-socfpga/Kconfig
-index a8afff5238..897b3f06f3 100644
+index 71eda42dfb..ad75864037 100644
 --- a/arch/arm/mach-socfpga/Kconfig
 +++ b/arch/arm/mach-socfpga/Kconfig
-@@ -161,6 +161,10 @@ config TARGET_SOCFPGA_CYCLONE5_SOCDK
+@@ -225,6 +225,10 @@ config TARGET_SOCFPGA_CYCLONE5_SOCDK
  	bool "Altera SOCFPGA SoCDK (Cyclone V)"
  	select TARGET_SOCFPGA_CYCLONE5
  
@@ -189,15 +191,15 @@ index a8afff5238..897b3f06f3 100644
  config TARGET_SOCFPGA_DEVBOARDS_DBM_SOC1
  	bool "Devboards DBM-SoC1 (Cyclone V)"
  	select TARGET_SOCFPGA_CYCLONE5
-@@ -209,6 +213,7 @@ config SYS_BOARD
- 	default "arria5-socdk" if TARGET_SOCFPGA_ARRIA5_SOCDK
+@@ -280,6 +284,7 @@ config SYS_BOARD
  	default "arria10-socdk" if TARGET_SOCFPGA_ARRIA10_SOCDK
+ 	default "chameleonv3" if TARGET_SOCFPGA_CHAMELEONV3
  	default "cyclone5-socdk" if TARGET_SOCFPGA_CYCLONE5_SOCDK
 +	default "cyclone5-runbmc" if TARGET_SOCFPGA_CYCLONE5_RUNBMC
  	default "dbm-soc1" if TARGET_SOCFPGA_DEVBOARDS_DBM_SOC1
  	default "de0-nano-soc" if TARGET_SOCFPGA_TERASIC_DE0_NANO
  	default "de1-soc" if TARGET_SOCFPGA_TERASIC_DE1_SOC
-@@ -229,6 +234,7 @@ config SYS_VENDOR
+@@ -304,6 +309,7 @@ config SYS_VENDOR
  	default "altera" if TARGET_SOCFPGA_ARRIA5_SOCDK
  	default "altera" if TARGET_SOCFPGA_ARRIA10_SOCDK
  	default "altera" if TARGET_SOCFPGA_CYCLONE5_SOCDK
@@ -205,11 +207,11 @@ index a8afff5238..897b3f06f3 100644
  	default "altera" if TARGET_SOCFPGA_STRATIX10_SOCDK
  	default "aries" if TARGET_SOCFPGA_ARIES_MCVEVK
  	default "devboards" if TARGET_SOCFPGA_DEVBOARDS_DBM_SOC1
-@@ -249,6 +255,7 @@ config SYS_CONFIG_NAME
- 	default "socfpga_arria5_socdk" if TARGET_SOCFPGA_ARRIA5_SOCDK
+@@ -329,6 +335,7 @@ config SYS_CONFIG_NAME
  	default "socfpga_arria10_socdk" if TARGET_SOCFPGA_ARRIA10_SOCDK
+ 	default "socfpga_chameleonv3" if TARGET_SOCFPGA_CHAMELEONV3
  	default "socfpga_cyclone5_socdk" if TARGET_SOCFPGA_CYCLONE5_SOCDK
-+	default "socfpga_cyclone5_socdk" if TARGET_SOCFPGA_CYCLONE5_RUNBMC
++	default "socfpga_cyclone5_runbmc" if TARGET_SOCFPGA_CYCLONE5_RUNBMC
  	default "socfpga_dbm_soc1" if TARGET_SOCFPGA_DEVBOARDS_DBM_SOC1
  	default "socfpga_de0_nano_soc" if TARGET_SOCFPGA_TERASIC_DE0_NANO
  	default "socfpga_de1_soc" if TARGET_SOCFPGA_TERASIC_DE1_SOC
@@ -239,11 +241,15 @@ index 0000000000..e1c8a6b3c7
 +obj-y	:= socfpga.o
 diff --git a/board/intel/cyclone5-runbmc/qts/iocsr_config.h b/board/intel/cyclone5-runbmc/qts/iocsr_config.h
 new file mode 100644
-index 0000000000..7219c6c9e2
+index 0000000000..8ec742e534
 --- /dev/null
 +++ b/board/intel/cyclone5-runbmc/qts/iocsr_config.h
-@@ -0,0 +1,659 @@
-+/* SPDX-License-Identifier: BSD-3-Clause */
+@@ -0,0 +1,664 @@
++/* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
++/*
++ * Copyright (C) 2022 Intel Corporation <www.intel.com>
++ *
++ */
 +/*
 + * Altera SoCFPGA IOCSR configuration
 + */
@@ -251,10 +257,10 @@ index 0000000000..7219c6c9e2
 +#ifndef __SOCFPGA_IOCSR_CONFIG_H__
 +#define __SOCFPGA_IOCSR_CONFIG_H__
 +
-+#define CONFIG_HPS_IOCSR_SCANCHAIN0_LENGTH	764
-+#define CONFIG_HPS_IOCSR_SCANCHAIN1_LENGTH	1719
-+#define CONFIG_HPS_IOCSR_SCANCHAIN2_LENGTH	955
-+#define CONFIG_HPS_IOCSR_SCANCHAIN3_LENGTH	16766
++#define CFG_HPS_IOCSR_SCANCHAIN0_LENGTH	764
++#define CFG_HPS_IOCSR_SCANCHAIN1_LENGTH	1719
++#define CFG_HPS_IOCSR_SCANCHAIN2_LENGTH	955
++#define CFG_HPS_IOCSR_SCANCHAIN3_LENGTH	16766
 +
 +const unsigned long iocsr_scan_chain0_table[] = {
 +	0x00000000,
@@ -310,15 +316,15 @@ index 0000000000..7219c6c9e2
 +	0x00001000,
 +	0x0000C030,
 +	0x0300C000,
-+	0x03000000,
-+	0x0000000C,
++	0x00000000,
++	0x00000000,
 +	0x0000300C,
 +	0x00000800,
 +	0x00000000,
 +	0x00000000,
 +	0x01800000,
 +	0x00000006,
-+	0x00002000,
++	0x00000000,
 +	0x00000400,
 +	0x00000000,
 +	0x00C03000,
@@ -347,23 +353,23 @@ index 0000000000..7219c6c9e2
 +	0x00000000,
 +	0x0C0300C0,
 +	0x00008000,
-+	0x00060180,
-+	0x20000000,
++	0x00000000,
++	0x18060000,
 +	0x00000000,
 +	0x00000000,
-+	0x00020000,
++	0x00018060,
 +	0x00004000,
-+	0x00040000,
++	0x00000000,
 +	0x0C030000,
 +	0x0C000000,
 +	0x00000030,
 +	0x0000C030,
 +	0x00002000,
 +	0x06018060,
-+	0x08000000,
 +	0x00000000,
-+	0x00000020,
-+	0x00008000,
++	0x00000000,
++	0x00000000,
++	0x00000000,
 +	0x00001000,
 +	0x0300C030,
 +	0x0300C000,
@@ -389,7 +395,7 @@ index 0000000000..7219c6c9e2
 +	0x00C00722,
 +	0x00000000,
 +	0x00000021,
-+	0x82000004,
++	0x82000000,
 +	0x05400000,
 +	0x03C80000,
 +	0x04010000,
@@ -403,7 +409,7 @@ index 0000000000..7219c6c9e2
 +	0x00600391,
 +	0x800E4400,
 +	0x00000001,
-+	0x40000002,
++	0x40000000,
 +	0x02A00000,
 +	0x01E40000,
 +	0x02A00000,
@@ -565,7 +571,7 @@ index 0000000000..7219c6c9e2
 +	0x00000000,
 +	0x00000482,
 +	0x00120800,
-+	0x00002000,
++	0x00000000,
 +	0x80000000,
 +	0x00104120,
 +	0x00000200,
@@ -594,7 +600,7 @@ index 0000000000..7219c6c9e2
 +	0x00075000,
 +	0x541A8000,
 +	0x03875001,
-+	0x10000000,
++	0x00000000,
 +	0x00000000,
 +	0x0080C000,
 +	0x41000000,
@@ -611,7 +617,7 @@ index 0000000000..7219c6c9e2
 +	0x00000000,
 +	0x00001208,
 +	0x00482000,
-+	0x00008000,
++	0x00000000,
 +	0x00000000,
 +	0x00410482,
 +	0x0006A000,
@@ -624,7 +630,7 @@ index 0000000000..7219c6c9e2
 +	0x00E1D400,
 +	0x00000000,
 +	0x0000090C,
-+	0x00000010,
++	0x00000000,
 +	0x90400000,
 +	0x00000000,
 +	0x2020C243,
@@ -668,11 +674,11 @@ index 0000000000..7219c6c9e2
 +	0x00075000,
 +	0x541A8000,
 +	0x03875001,
-+	0x10000000,
++	0x00000000,
 +	0x00000000,
 +	0x0080C000,
 +	0x41000000,
-+	0x04000002,
++	0x00000002,
 +	0x00820000,
 +	0xAA0D4000,
 +	0x01C3A800,
@@ -685,7 +691,7 @@ index 0000000000..7219c6c9e2
 +	0x00000000,
 +	0x00001208,
 +	0x00482000,
-+	0x00008000,
++	0x00000000,
 +	0x00000000,
 +	0x00410482,
 +	0x0006A000,
@@ -713,7 +719,7 @@ index 0000000000..7219c6c9e2
 +	0x00000000,
 +	0x00000482,
 +	0x00120800,
-+	0x00002000,
++	0x00000000,
 +	0x80000000,
 +	0x00104120,
 +	0x00000200,
@@ -742,11 +748,11 @@ index 0000000000..7219c6c9e2
 +	0x00075000,
 +	0x541A8000,
 +	0x03875001,
-+	0x10000000,
++	0x00000000,
 +	0x00000000,
 +	0x0080C000,
 +	0x41000000,
-+	0x04000002,
++	0x00000002,
 +	0x00820000,
 +	0xAA0D4000,
 +	0x01C3A800,
@@ -759,7 +765,7 @@ index 0000000000..7219c6c9e2
 +	0x00000000,
 +	0x00001208,
 +	0x00482000,
-+	0x00008000,
++	0x00000000,
 +	0x00000000,
 +	0x00410482,
 +	0x0006A000,
@@ -772,7 +778,7 @@ index 0000000000..7219c6c9e2
 +	0x00E1D400,
 +	0x00000000,
 +	0x0000090C,
-+	0x00000010,
++	0x00000000,
 +	0x90400000,
 +	0x00000000,
 +	0x2020C243,
@@ -816,11 +822,11 @@ index 0000000000..7219c6c9e2
 +	0x00075000,
 +	0x541A8000,
 +	0x03875001,
-+	0x10000000,
++	0x00000000,
 +	0x00000000,
 +	0x0080C000,
 +	0x41000000,
-+	0x04000002,
++	0x00000002,
 +	0x00820000,
 +	0x00489800,
 +	0x001A1A1A,
@@ -835,7 +841,7 @@ index 0000000000..7219c6c9e2
 +	0x04000000,
 +	0x00000009,
 +	0x00002410,
-+	0x00000040,
++	0x00000000,
 +	0x41000000,
 +	0x00002082,
 +	0x00000350,
@@ -847,7 +853,7 @@ index 0000000000..7219c6c9e2
 +	0x002A8350,
 +	0x000070EA,
 +	0x86000000,
-+	0x08000004,
++	0x00000004,
 +	0x00000000,
 +	0x00482000,
 +	0x21800000,
@@ -901,14 +907,19 @@ index 0000000000..7219c6c9e2
 +};
 +
 +
++
 +#endif /* __SOCFPGA_IOCSR_CONFIG_H__ */
 diff --git a/board/intel/cyclone5-runbmc/qts/pinmux_config.h b/board/intel/cyclone5-runbmc/qts/pinmux_config.h
 new file mode 100644
-index 0000000000..5e59762039
+index 0000000000..0a32decb8c
 --- /dev/null
 +++ b/board/intel/cyclone5-runbmc/qts/pinmux_config.h
-@@ -0,0 +1,218 @@
-+/* SPDX-License-Identifier: BSD-3-Clause */
+@@ -0,0 +1,222 @@
++/* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
++/*
++ * Copyright (C) 2022 Intel Corporation <www.intel.com>
++ *
++ */
 +/*
 + * Altera SoCFPGA PinMux configuration
 + */
@@ -1128,11 +1139,14 @@ index 0000000000..5e59762039
 +#endif /* __SOCFPGA_PINMUX_CONFIG_H__ */
 diff --git a/board/intel/cyclone5-runbmc/qts/pll_config.h b/board/intel/cyclone5-runbmc/qts/pll_config.h
 new file mode 100644
-index 0000000000..79519df9cf
+index 0000000000..9d9c93eee9
 --- /dev/null
 +++ b/board/intel/cyclone5-runbmc/qts/pll_config.h
-@@ -0,0 +1,84 @@
+@@ -0,0 +1,86 @@
 +/* SPDX-License-Identifier: BSD-3-Clause */
++/*
++ * Copyright (C) 2022 Intel Corporation <www.intel.com>
++ */
 +/*
 + * Altera SoCFPGA Clock and PLL configuration
 + */
@@ -1140,89 +1154,92 @@ index 0000000000..79519df9cf
 +#ifndef __SOCFPGA_PLL_CONFIG_H__
 +#define __SOCFPGA_PLL_CONFIG_H__
 +
-+#define CONFIG_HPS_DBCTRL_STAYOSC1 1
++#define CFG_HPS_DBCTRL_STAYOSC1 1
 +
-+#define CONFIG_HPS_MAINPLLGRP_VCO_DENOM 0
-+#define CONFIG_HPS_MAINPLLGRP_VCO_NUMER 47
-+#define CONFIG_HPS_MAINPLLGRP_MPUCLK_CNT 0
-+#define CONFIG_HPS_MAINPLLGRP_MAINCLK_CNT 0
-+#define CONFIG_HPS_MAINPLLGRP_DBGATCLK_CNT 0
-+#define CONFIG_HPS_MAINPLLGRP_MAINQSPICLK_CNT 511
-+#define CONFIG_HPS_MAINPLLGRP_MAINNANDSDMMCCLK_CNT 511
-+#define CONFIG_HPS_MAINPLLGRP_CFGS2FUSER0CLK_CNT 9
-+#define CONFIG_HPS_MAINPLLGRP_MAINDIV_L3MPCLK 1
-+#define CONFIG_HPS_MAINPLLGRP_MAINDIV_L3SPCLK 1
-+#define CONFIG_HPS_MAINPLLGRP_MAINDIV_L4MPCLK 1
-+#define CONFIG_HPS_MAINPLLGRP_MAINDIV_L4SPCLK 1
-+#define CONFIG_HPS_MAINPLLGRP_DBGDIV_DBGATCLK 0
-+#define CONFIG_HPS_MAINPLLGRP_DBGDIV_DBGCLK 1
-+#define CONFIG_HPS_MAINPLLGRP_TRACEDIV_TRACECLK 0
-+#define CONFIG_HPS_MAINPLLGRP_L4SRC_L4MP 1
-+#define CONFIG_HPS_MAINPLLGRP_L4SRC_L4SP 1
++#define CFG_HPS_MAINPLLGRP_VCO_DENOM 0
++#define CFG_HPS_MAINPLLGRP_VCO_NUMER 47
++#define CFG_HPS_MAINPLLGRP_MPUCLK_CNT 0
++#define CFG_HPS_MAINPLLGRP_MAINCLK_CNT 0
++#define CFG_HPS_MAINPLLGRP_DBGATCLK_CNT 0
++#define CFG_HPS_MAINPLLGRP_MAINQSPICLK_CNT 511
++#define CFG_HPS_MAINPLLGRP_MAINNANDSDMMCCLK_CNT 511
++#define CFG_HPS_MAINPLLGRP_CFGS2FUSER0CLK_CNT 11
++#define CFG_HPS_MAINPLLGRP_MAINDIV_L3MPCLK 1
++#define CFG_HPS_MAINPLLGRP_MAINDIV_L3SPCLK 1
++#define CFG_HPS_MAINPLLGRP_MAINDIV_L4MPCLK 1
++#define CFG_HPS_MAINPLLGRP_MAINDIV_L4SPCLK 1
++#define CFG_HPS_MAINPLLGRP_DBGDIV_DBGATCLK 0
++#define CFG_HPS_MAINPLLGRP_DBGDIV_DBGCLK 1
++#define CFG_HPS_MAINPLLGRP_TRACEDIV_TRACECLK 0
++#define CFG_HPS_MAINPLLGRP_L4SRC_L4MP 1
++#define CFG_HPS_MAINPLLGRP_L4SRC_L4SP 1
 +
-+#define CONFIG_HPS_PERPLLGRP_VCO_DENOM 0
-+#define CONFIG_HPS_PERPLLGRP_VCO_NUMER 39
-+#define CONFIG_HPS_PERPLLGRP_VCO_PSRC 0
-+#define CONFIG_HPS_PERPLLGRP_EMAC0CLK_CNT 3
-+#define CONFIG_HPS_PERPLLGRP_EMAC1CLK_CNT 3
-+#define CONFIG_HPS_PERPLLGRP_PERQSPICLK_CNT 511
-+#define CONFIG_HPS_PERPLLGRP_PERNANDSDMMCCLK_CNT 19
-+#define CONFIG_HPS_PERPLLGRP_PERBASECLK_CNT 4
-+#define CONFIG_HPS_PERPLLGRP_S2FUSER1CLK_CNT 511
-+#define CONFIG_HPS_PERPLLGRP_DIV_USBCLK 0
-+#define CONFIG_HPS_PERPLLGRP_DIV_SPIMCLK 4
-+#define CONFIG_HPS_PERPLLGRP_DIV_CAN0CLK 4
-+#define CONFIG_HPS_PERPLLGRP_DIV_CAN1CLK 4
-+#define CONFIG_HPS_PERPLLGRP_GPIODIV_GPIODBCLK 6249
-+#define CONFIG_HPS_PERPLLGRP_SRC_SDMMC 2
-+#define CONFIG_HPS_PERPLLGRP_SRC_NAND 2
-+#define CONFIG_HPS_PERPLLGRP_SRC_QSPI 1
++#define CFG_HPS_PERPLLGRP_VCO_DENOM 0
++#define CFG_HPS_PERPLLGRP_VCO_NUMER 39
++#define CFG_HPS_PERPLLGRP_VCO_PSRC 0
++#define CFG_HPS_PERPLLGRP_EMAC0CLK_CNT 3
++#define CFG_HPS_PERPLLGRP_EMAC1CLK_CNT 3
++#define CFG_HPS_PERPLLGRP_PERQSPICLK_CNT 511
++#define CFG_HPS_PERPLLGRP_PERNANDSDMMCCLK_CNT 19
++#define CFG_HPS_PERPLLGRP_PERBASECLK_CNT 4
++#define CFG_HPS_PERPLLGRP_S2FUSER1CLK_CNT 511
++#define CFG_HPS_PERPLLGRP_DIV_USBCLK 0
++#define CFG_HPS_PERPLLGRP_DIV_SPIMCLK 4
++#define CFG_HPS_PERPLLGRP_DIV_CAN0CLK 4
++#define CFG_HPS_PERPLLGRP_DIV_CAN1CLK 4
++#define CFG_HPS_PERPLLGRP_GPIODIV_GPIODBCLK 6249
++#define CFG_HPS_PERPLLGRP_SRC_SDMMC 2
++#define CFG_HPS_PERPLLGRP_SRC_NAND 2
++#define CFG_HPS_PERPLLGRP_SRC_QSPI 1
 +
-+#define CONFIG_HPS_SDRPLLGRP_VCO_DENOM 0
-+#define CONFIG_HPS_SDRPLLGRP_VCO_NUMER 31
-+#define CONFIG_HPS_SDRPLLGRP_VCO_SSRC 0
-+#define CONFIG_HPS_SDRPLLGRP_DDRDQSCLK_CNT 1
-+#define CONFIG_HPS_SDRPLLGRP_DDRDQSCLK_PHASE 0
-+#define CONFIG_HPS_SDRPLLGRP_DDR2XDQSCLK_CNT 0
-+#define CONFIG_HPS_SDRPLLGRP_DDR2XDQSCLK_PHASE 0
-+#define CONFIG_HPS_SDRPLLGRP_DDRDQCLK_CNT 1
-+#define CONFIG_HPS_SDRPLLGRP_DDRDQCLK_PHASE 4
-+#define CONFIG_HPS_SDRPLLGRP_S2FUSER2CLK_CNT 5
-+#define CONFIG_HPS_SDRPLLGRP_S2FUSER2CLK_PHASE 0
++#define CFG_HPS_SDRPLLGRP_VCO_DENOM 0
++#define CFG_HPS_SDRPLLGRP_VCO_NUMER 31
++#define CFG_HPS_SDRPLLGRP_VCO_SSRC 0
++#define CFG_HPS_SDRPLLGRP_DDRDQSCLK_CNT 1
++#define CFG_HPS_SDRPLLGRP_DDRDQSCLK_PHASE 0
++#define CFG_HPS_SDRPLLGRP_DDR2XDQSCLK_CNT 0
++#define CFG_HPS_SDRPLLGRP_DDR2XDQSCLK_PHASE 0
++#define CFG_HPS_SDRPLLGRP_DDRDQCLK_CNT 1
++#define CFG_HPS_SDRPLLGRP_DDRDQCLK_PHASE 4
++#define CFG_HPS_SDRPLLGRP_S2FUSER2CLK_CNT 5
++#define CFG_HPS_SDRPLLGRP_S2FUSER2CLK_PHASE 0
 +
-+#define CONFIG_HPS_CLK_OSC1_HZ 25000000
-+#define CONFIG_HPS_CLK_OSC2_HZ 25000000
-+#define CONFIG_HPS_CLK_F2S_SDR_REF_HZ 0
-+#define CONFIG_HPS_CLK_F2S_PER_REF_HZ 0
-+#define CONFIG_HPS_CLK_MAINVCO_HZ 1200000000
-+#define CONFIG_HPS_CLK_PERVCO_HZ 1000000000
-+#define CONFIG_HPS_CLK_SDRVCO_HZ 800000000
-+#define CONFIG_HPS_CLK_EMAC0_HZ 250000000
-+#define CONFIG_HPS_CLK_EMAC1_HZ 250000000
-+#define CONFIG_HPS_CLK_USBCLK_HZ 200000000
-+#define CONFIG_HPS_CLK_NAND_HZ 12500000
-+#define CONFIG_HPS_CLK_SDMMC_HZ 50000000
-+#define CONFIG_HPS_CLK_QSPI_HZ 2343750
-+#define CONFIG_HPS_CLK_SPIM_HZ 12500000
-+#define CONFIG_HPS_CLK_CAN0_HZ 12500000
-+#define CONFIG_HPS_CLK_CAN1_HZ 12500000
-+#define CONFIG_HPS_CLK_GPIODB_HZ 32000
-+#define CONFIG_HPS_CLK_L4_MP_HZ 100000000
-+#define CONFIG_HPS_CLK_L4_SP_HZ 100000000
++#define CFG_HPS_CLK_OSC1_HZ 25000000
++#define CFG_HPS_CLK_OSC2_HZ 25000000
++#define CFG_HPS_CLK_F2S_SDR_REF_HZ 0
++#define CFG_HPS_CLK_F2S_PER_REF_HZ 0
++#define CFG_HPS_CLK_MAINVCO_HZ 1200000000
++#define CFG_HPS_CLK_PERVCO_HZ 1000000000
++#define CFG_HPS_CLK_SDRVCO_HZ 800000000
++#define CFG_HPS_CLK_EMAC0_HZ 250000000
++#define CFG_HPS_CLK_EMAC1_HZ 250000000
++#define CFG_HPS_CLK_USBCLK_HZ 200000000
++#define CFG_HPS_CLK_NAND_HZ 12500000
++#define CFG_HPS_CLK_SDMMC_HZ 50000000
++#define CFG_HPS_CLK_QSPI_HZ 2343750
++#define CFG_HPS_CLK_SPIM_HZ 12500000
++#define CFG_HPS_CLK_CAN0_HZ 12500000
++#define CFG_HPS_CLK_CAN1_HZ 12500000
++#define CFG_HPS_CLK_GPIODB_HZ 32000
++#define CFG_HPS_CLK_L4_MP_HZ 100000000
++#define CFG_HPS_CLK_L4_SP_HZ 100000000
 +
-+#define CONFIG_HPS_ALTERAGRP_MPUCLK 1
-+#define CONFIG_HPS_ALTERAGRP_MAINCLK 3
-+#define CONFIG_HPS_ALTERAGRP_DBGATCLK 3
-+
++#define CFG_HPS_ALTERAGRP_MPUCLK 1
++#define CFG_HPS_ALTERAGRP_MAINCLK 3
++#define CFG_HPS_ALTERAGRP_DBGATCLK 3
 +
 +#endif /* __SOCFPGA_PLL_CONFIG_H__ */
 diff --git a/board/intel/cyclone5-runbmc/qts/sdram_config.h b/board/intel/cyclone5-runbmc/qts/sdram_config.h
 new file mode 100644
-index 0000000000..7ab95d242b
+index 0000000000..265a271363
 --- /dev/null
 +++ b/board/intel/cyclone5-runbmc/qts/sdram_config.h
-@@ -0,0 +1,345 @@
-+/* SPDX-License-Identifier: BSD-3-Clause */
+@@ -0,0 +1,349 @@
++/* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
++/*
++ * Copyright (C) 2022 Intel Corporation <www.intel.com>
++ *
++ */
 +/*
 + * Altera SoCFPGA SDRAM configuration
 + *
@@ -1232,76 +1249,76 @@ index 0000000000..7ab95d242b
 +#define __SOCFPGA_SDRAM_CONFIG_H__
 +
 +/* SDRAM configuration */
-+#define CONFIG_HPS_SDR_CTRLCFG_CPORTRDWR_CPORTRDWR		0x5A56A
-+#define CONFIG_HPS_SDR_CTRLCFG_CPORTRMAP_CPORTRMAP		0xB00088
-+#define CONFIG_HPS_SDR_CTRLCFG_CPORTWIDTH_CPORTWIDTH		0x44555
-+#define CONFIG_HPS_SDR_CTRLCFG_CPORTWMAP_CPORTWMAP		0x2C011000
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_ADDRORDER		0
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_DQSTRKEN			0
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_ECCCORREN		1
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_ECCEN			1
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_MEMBL			8
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_MEMTYPE			2
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_NODMPINS			0
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_REORDEREN		1
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLCFG_STARVELIMIT		10
-+#define CONFIG_HPS_SDR_CTRLCFG_CTRLWIDTH_CTRLWIDTH		2
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMADDRW_BANKBITS		3
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMADDRW_COLBITS		10
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMADDRW_CSBITS			1
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMADDRW_ROWBITS		15
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMDEVWIDTH_DEVWIDTH		8
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMIFWIDTH_IFWIDTH		40
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMINTR_INTREN			0
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMODT_READ			0
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMODT_WRITE			1
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING1_AL			0
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING1_TCL			7
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING1_TCWL			6
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING1_TFAW			12
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING1_TRFC			104
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING1_TRRD			4
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TRCD		6
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TREFI		3120
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TRP		6
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TWR		6
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TWTR		4
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING3_TCCD			4
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING3_TMRD			4
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING3_TRAS			14
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING3_TRC			20
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING3_TRTP			4
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING4_PWRDOWNEXIT		3
-+#define CONFIG_HPS_SDR_CTRLCFG_DRAMTIMING4_SELFRFSHEXIT		512
-+#define CONFIG_HPS_SDR_CTRLCFG_EXTRATIME1_CFG_EXTRA_CTL_CLK_RD_TO_WR 2
-+#define CONFIG_HPS_SDR_CTRLCFG_EXTRATIME1_CFG_EXTRA_CTL_CLK_RD_TO_WR_BC 2
-+#define CONFIG_HPS_SDR_CTRLCFG_EXTRATIME1_CFG_EXTRA_CTL_CLK_RD_TO_WR_DIFF_CHIP 2
-+#define CONFIG_HPS_SDR_CTRLCFG_FIFOCFG_INCSYNC			0
-+#define CONFIG_HPS_SDR_CTRLCFG_FIFOCFG_SYNCMODE			0
-+#define CONFIG_HPS_SDR_CTRLCFG_FPGAPORTRST			0x111
-+#define CONFIG_HPS_SDR_CTRLCFG_LOWPWREQ_SELFRFSHMASK		3
-+#define CONFIG_HPS_SDR_CTRLCFG_LOWPWRTIMING_AUTOPDCYCLES	0
-+#define CONFIG_HPS_SDR_CTRLCFG_LOWPWRTIMING_CLKDISABLECYCLES	8
-+#define CONFIG_HPS_SDR_CTRLCFG_MPPACING_0_THRESHOLD1_31_0	0x20820820
-+#define CONFIG_HPS_SDR_CTRLCFG_MPPACING_1_THRESHOLD1_59_32	0x8208208
-+#define CONFIG_HPS_SDR_CTRLCFG_MPPACING_1_THRESHOLD2_3_0	0
-+#define CONFIG_HPS_SDR_CTRLCFG_MPPACING_2_THRESHOLD2_35_4	0x41041041
-+#define CONFIG_HPS_SDR_CTRLCFG_MPPACING_3_THRESHOLD2_59_36	0x410410
-+#define CONFIG_HPS_SDR_CTRLCFG_MPPRIORITY_USERPRIORITY		0x0
-+#define CONFIG_HPS_SDR_CTRLCFG_MPTHRESHOLDRST_0_THRESHOLDRSTCYCLES_31_0 0x01010101
-+#define CONFIG_HPS_SDR_CTRLCFG_MPTHRESHOLDRST_1_THRESHOLDRSTCYCLES_63_32 0x01010101
-+#define CONFIG_HPS_SDR_CTRLCFG_MPTHRESHOLDRST_2_THRESHOLDRSTCYCLES_79_64 0x0101
-+#define CONFIG_HPS_SDR_CTRLCFG_MPWIEIGHT_0_STATICWEIGHT_31_0	0x21084210
-+#define CONFIG_HPS_SDR_CTRLCFG_MPWIEIGHT_1_STATICWEIGHT_49_32	0x10441
-+#define CONFIG_HPS_SDR_CTRLCFG_MPWIEIGHT_1_SUMOFWEIGHT_13_0	0x78
-+#define CONFIG_HPS_SDR_CTRLCFG_MPWIEIGHT_2_SUMOFWEIGHT_45_14	0x0
-+#define CONFIG_HPS_SDR_CTRLCFG_MPWIEIGHT_3_SUMOFWEIGHT_63_46	0x0
-+#define CONFIG_HPS_SDR_CTRLCFG_PHYCTRL_PHYCTRL_0		0x200
-+#define CONFIG_HPS_SDR_CTRLCFG_PORTCFG_AUTOPCHEN		0
-+#define CONFIG_HPS_SDR_CTRLCFG_RFIFOCMAP_RFIFOCMAP		0x760210
-+#define CONFIG_HPS_SDR_CTRLCFG_STATICCFG_MEMBL			2
-+#define CONFIG_HPS_SDR_CTRLCFG_STATICCFG_USEECCASDATA		0
-+#define CONFIG_HPS_SDR_CTRLCFG_WFIFOCMAP_WFIFOCMAP		0x980543
++#define CFG_HPS_SDR_CTRLCFG_CPORTRDWR_CPORTRDWR		0x5A56A
++#define CFG_HPS_SDR_CTRLCFG_CPORTRMAP_CPORTRMAP		0xB00088
++#define CFG_HPS_SDR_CTRLCFG_CPORTWIDTH_CPORTWIDTH		0x44555
++#define CFG_HPS_SDR_CTRLCFG_CPORTWMAP_CPORTWMAP		0x2C011000
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_ADDRORDER		0
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_DQSTRKEN			0
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_ECCCORREN		1
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_ECCEN			1
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_MEMBL			8
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_MEMTYPE			2
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_NODMPINS			0
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_REORDEREN		1
++#define CFG_HPS_SDR_CTRLCFG_CTRLCFG_STARVELIMIT		10
++#define CFG_HPS_SDR_CTRLCFG_CTRLWIDTH_CTRLWIDTH		2
++#define CFG_HPS_SDR_CTRLCFG_DRAMADDRW_BANKBITS		3
++#define CFG_HPS_SDR_CTRLCFG_DRAMADDRW_COLBITS		10
++#define CFG_HPS_SDR_CTRLCFG_DRAMADDRW_CSBITS			1
++#define CFG_HPS_SDR_CTRLCFG_DRAMADDRW_ROWBITS		15
++#define CFG_HPS_SDR_CTRLCFG_DRAMDEVWIDTH_DEVWIDTH		8
++#define CFG_HPS_SDR_CTRLCFG_DRAMIFWIDTH_IFWIDTH		40
++#define CFG_HPS_SDR_CTRLCFG_DRAMINTR_INTREN			0
++#define CFG_HPS_SDR_CTRLCFG_DRAMODT_READ			0
++#define CFG_HPS_SDR_CTRLCFG_DRAMODT_WRITE			1
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING1_AL			0
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING1_TCL			7
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING1_TCWL			6
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING1_TFAW			12
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING1_TRFC			104
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING1_TRRD			4
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TRCD		6
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TREFI		3120
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TRP		6
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TWR		6
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING2_IF_TWTR		4
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING3_TCCD			4
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING3_TMRD			4
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING3_TRAS			14
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING3_TRC			20
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING3_TRTP			4
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING4_PWRDOWNEXIT		3
++#define CFG_HPS_SDR_CTRLCFG_DRAMTIMING4_SELFRFSHEXIT		512
++#define CFG_HPS_SDR_CTRLCFG_EXTRATIME1_CFG_EXTRA_CTL_CLK_RD_TO_WR 2
++#define CFG_HPS_SDR_CTRLCFG_EXTRATIME1_CFG_EXTRA_CTL_CLK_RD_TO_WR_BC 2
++#define CFG_HPS_SDR_CTRLCFG_EXTRATIME1_CFG_EXTRA_CTL_CLK_RD_TO_WR_DIFF_CHIP 2
++#define CFG_HPS_SDR_CTRLCFG_FIFOCFG_INCSYNC			0
++#define CFG_HPS_SDR_CTRLCFG_FIFOCFG_SYNCMODE			0
++#define CFG_HPS_SDR_CTRLCFG_FPGAPORTRST			0x0
++#define CFG_HPS_SDR_CTRLCFG_LOWPWREQ_SELFRFSHMASK		3
++#define CFG_HPS_SDR_CTRLCFG_LOWPWRTIMING_AUTOPDCYCLES	0
++#define CFG_HPS_SDR_CTRLCFG_LOWPWRTIMING_CLKDISABLECYCLES	8
++#define CFG_HPS_SDR_CTRLCFG_MPPACING_0_THRESHOLD1_31_0	0x20820820
++#define CFG_HPS_SDR_CTRLCFG_MPPACING_1_THRESHOLD1_59_32	0x8208208
++#define CFG_HPS_SDR_CTRLCFG_MPPACING_1_THRESHOLD2_3_0	0
++#define CFG_HPS_SDR_CTRLCFG_MPPACING_2_THRESHOLD2_35_4	0x41041041
++#define CFG_HPS_SDR_CTRLCFG_MPPACING_3_THRESHOLD2_59_36	0x410410
++#define CFG_HPS_SDR_CTRLCFG_MPPRIORITY_USERPRIORITY		0x0
++#define CFG_HPS_SDR_CTRLCFG_MPTHRESHOLDRST_0_THRESHOLDRSTCYCLES_31_0 0x01010101
++#define CFG_HPS_SDR_CTRLCFG_MPTHRESHOLDRST_1_THRESHOLDRSTCYCLES_63_32 0x01010101
++#define CFG_HPS_SDR_CTRLCFG_MPTHRESHOLDRST_2_THRESHOLDRSTCYCLES_79_64 0x0101
++#define CFG_HPS_SDR_CTRLCFG_MPWIEIGHT_0_STATICWEIGHT_31_0	0x21084210
++#define CFG_HPS_SDR_CTRLCFG_MPWIEIGHT_1_STATICWEIGHT_49_32	0x10441
++#define CFG_HPS_SDR_CTRLCFG_MPWIEIGHT_1_SUMOFWEIGHT_13_0	0x78
++#define CFG_HPS_SDR_CTRLCFG_MPWIEIGHT_2_SUMOFWEIGHT_45_14	0x0
++#define CFG_HPS_SDR_CTRLCFG_MPWIEIGHT_3_SUMOFWEIGHT_63_46	0x0
++#define CFG_HPS_SDR_CTRLCFG_PHYCTRL_PHYCTRL_0		0x200
++#define CFG_HPS_SDR_CTRLCFG_PORTCFG_AUTOPCHEN		0
++#define CFG_HPS_SDR_CTRLCFG_RFIFOCMAP_RFIFOCMAP		0x760210
++#define CFG_HPS_SDR_CTRLCFG_STATICCFG_MEMBL			2
++#define CFG_HPS_SDR_CTRLCFG_STATICCFG_USEECCASDATA		0
++#define CFG_HPS_SDR_CTRLCFG_WFIFOCMAP_WFIFOCMAP		0x980543
 +
 +/* Sequencer auto configuration */
 +#define RW_MGR_ACTIVATE_0_AND_1	0x0D
@@ -1375,7 +1392,7 @@ index 0000000000..7ab95d242b
 +#define IO_SHIFT_DQS_EN_WHEN_SHIFT_DQS	0
 +#define MAX_LATENCY_COUNT_WIDTH	5
 +#define READ_VALID_FIFO_SIZE	16
-+#define REG_FILE_INIT_SEQ_SIGNATURE	0x555504d3
++#define REG_FILE_INIT_SEQ_SIGNATURE	0x555504dd
 +#define RW_MGR_MEM_ADDRESS_MIRRORING	0
 +#define RW_MGR_MEM_DATA_MASK_WIDTH	5
 +#define RW_MGR_MEM_DATA_WIDTH	40
@@ -1580,32 +1597,49 @@ index 0000000000..48bfe32951
 +#include <common.h>
 diff --git a/configs/socfpga_cyclone5_runbmc_defconfig b/configs/socfpga_cyclone5_runbmc_defconfig
 new file mode 100644
-index 0000000000..bdf535d4cf
+index 0000000000..01cffd95eb
 --- /dev/null
 +++ b/configs/socfpga_cyclone5_runbmc_defconfig
-@@ -0,0 +1,84 @@
+@@ -0,0 +1,115 @@
 +CONFIG_ARM=y
++CONFIG_SYS_L2_PL310=y
 +CONFIG_ARCH_SOCFPGA=y
++CONFIG_SYS_MALLOC_LEN=0x4000000
 +CONFIG_ENV_SIZE=0x10000
 +CONFIG_ENV_OFFSET=0x4400
 +CONFIG_ENV_OFFSET_REDUND=0x14400
 +CONFIG_SYS_REDUNDAND_ENVIRONMENT=y
-+CONFIG_SYS_SPI_U_BOOT_OFFS=0x40000
 +CONFIG_DM_GPIO=y
++CONFIG_DEFAULT_DEVICE_TREE="socfpga_cyclone5_runbmc"
++CONFIG_SYS_LOAD_ADDR=0x01000000
 +CONFIG_SPL_TEXT_BASE=0xC0000000
 +CONFIG_TARGET_SOCFPGA_CYCLONE5_RUNBMC=y
++# CONFIG_SPL_SPI_SUPPORT is not set
++# CONFIG_SPL_DM_SPI is not set
++# CONFIG_SPL_DM_SPI_FLASH is not set
++# CONFIG_SPL_SPI_FLASH_SUPPORT is not set
++# CONFIG_SPL_SPI is not set
 +CONFIG_DISTRO_DEFAULTS=y
++CONFIG_HAS_CUSTOM_SYS_INIT_SP_ADDR=y
++CONFIG_CUSTOM_SYS_INIT_SP_ADDR=0x800000
 +CONFIG_FIT=y
++CONFIG_TIMESTAMP=y
 +CONFIG_USE_BOOTCOMMAND=y
-+CONFIG_BOOTCOMMAND="bridge enable; run bootcmd_mmc0"
++CONFIG_BOOTCOMMAND="bridge enable; run bootcmd_mmc"
++CONFIG_DEFAULT_FDT_FILE="socfpga_cyclone5_runbmc.dtb"
 +CONFIG_SYS_CONSOLE_IS_IN_ENV=y
 +CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
 +CONFIG_SYS_CONSOLE_ENV_OVERWRITE=y
-+CONFIG_DEFAULT_FDT_FILE="socfpga_cyclone5_runbmc.dtb"
-+CONFIG_VERSION_VARIABLE=y
 +# CONFIG_DISPLAY_BOARDINFO is not set
 +CONFIG_DISPLAY_BOARDINFO_LATE=y
++CONFIG_CLOCKS=y
++CONFIG_SPL_PAD_TO=0x10000
++CONFIG_SPL_NO_BSS_LIMIT=y
++# CONFIG_SPL_SHARES_INIT_SP_ADDR is not set
++CONFIG_SPL_STACK=0x0
 +# CONFIG_SPL_SPI_LOAD is not set
++CONFIG_SYS_SPI_U_BOOT_OFFS=0x40000
++CONFIG_SYS_MAXARGS=32
 +CONFIG_CMD_ASKENV=y
 +CONFIG_CMD_GREPENV=y
 +# CONFIG_CMD_DFU is not set
@@ -1623,15 +1657,16 @@ index 0000000000..bdf535d4cf
 +# CONFIG_CMD_UBI is not set
 +# CONFIG_ISO_PARTITION is not set
 +# CONFIG_EFI_PARTITION is not set
-+CONFIG_DEFAULT_DEVICE_TREE="socfpga_cyclone5_runbmc"
 +CONFIG_ENV_IS_IN_MMC=y
 +CONFIG_SYS_RELOC_GD_ENV_ADDR=y
++CONFIG_VERSION_VARIABLE=y
 +CONFIG_SPL_DM_SEQ_ALIAS=y
 +# CONFIG_DFU_MMC is not set
++CONFIG_SYS_DFU_DATA_BUF_SIZE=0x1000000
 +CONFIG_DWAPB_GPIO=y
 +CONFIG_DM_I2C=y
 +CONFIG_SYS_I2C_DW=y
-+CONFIG_DM_MMC=y
++CONFIG_SYS_MMC_MAX_BLK_COUNT=256
 +CONFIG_MMC_DW=y
 +# CONFIG_MTD is not set
 +# CONFIG_SPI_FLASH_MACRONIX is not set
@@ -1668,11 +1703,24 @@ index 0000000000..bdf535d4cf
 +CONFIG_SPL_YMODEM_SUPPORT=y
 +CONFIG_SPL_LEGACY_IMAGE_CRC_CHECK=y
 +# CONFIG_SPL_RAW_IMAGE_SUPPORT is not set
++CONFIG_CMD_GPT=y
++# CONFIG_CMD_GPT_RENAME is not set
++CONFIG_EFI_PARTITION=y
++CONFIG_EFI_PARTITION_ENTRIES_NUMBERS=128
++CONFIG_EFI_PARTITION_ENTRIES_OFF=0
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_RANDOM_UUID=y
++CONFIG_SUPPORT_EMMC_BOOT=y
++# CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_USE_PARTITION is not set
++CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR=0x0
++CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_DATA_PART_OFFSET=0x0
++CONFIG_SUPPORT_EMMC_BOOT_OVERRIDE_PART_CONFIG=y
++CONFIG_SYS_MMCSD_RAW_MODE_EMMC_BOOT_PARTITION=1
 diff --git a/drivers/net/dwmac_socfpga.c b/drivers/net/dwmac_socfpga.c
-index 82fdff51da..46c19220cd 100644
+index b3a53ebd16..f93e939db4 100644
 --- a/drivers/net/dwmac_socfpga.c
 +++ b/drivers/net/dwmac_socfpga.c
-@@ -107,6 +107,9 @@ static int dwmac_socfpga_probe(struct udevice *dev)
+@@ -224,6 +224,9 @@ static int dwmac_socfpga_probe(struct udevice *dev)
  		modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RMII;
  		break;
  	case PHY_INTERFACE_MODE_RGMII:
@@ -1682,26 +1730,124 @@ index 82fdff51da..46c19220cd 100644
  		modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RGMII;
  		break;
  	default:
+diff --git a/include/configs/socfpga_cyclone5_runbmc.h b/include/configs/socfpga_cyclone5_runbmc.h
+new file mode 100644
+index 0000000000..d6099aa3ef
+--- /dev/null
++++ b/include/configs/socfpga_cyclone5_runbmc.h
+@@ -0,0 +1,91 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (C) 2023 Intel Corporation <www.intel.com>
++ *
++ */
++#ifndef __CONFIG_SOCFPGA_CYCLONE5_RUNBMC_H__
++#define __CONFIG_SOCFPGA_CYCLONE5_RUNBMC_H__
++
++#include <asm/arch/base_addr_ac5.h>
++
++/* Memory configurations */
++#define PHYS_SDRAM_1_SIZE		0x40000000
++
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"bootm_size=0xa000000\0" \
++	"kernel_addr_r="__stringify(CONFIG_SYS_LOAD_ADDR)"\0" \
++	"fdt_addr_r=0x02000000\0" \
++	"scriptaddr=0x02100000\0" \
++	"socfpga_legacy_reset_compat=1\0" \
++	"size_env=128KiB\0" \
++	"size_boot=32MiB\0" \
++	"size_rofs=512MiB\0" \
++	"partitions=" \
++		"uuid_disk=${uuid_disk};" \
++		"name=env,size=${size_env},uuid=${uuid_env};" \
++		"name=boot-a,size=${size_boot},uuid=${uuid_boot_a},bootable;" \
++		"name=boot-b,size=${size_boot},uuid=${uuid_boot_b};" \
++		"name=rofs-a,size=${size_rofs},uuid=${uuid_rofs_a};" \
++		"name=rofs-b,size=${size_rofs},uuid=${uuid_rofs_b};" \
++		"name=rwfs,size=0,uuid=${uuid_rwfs}\0" \
++	"do_partitions=" \
++		"gpt write mmc 0 ${partitions}; mmc rescan\0" \
++	"image_uboot=u-boot.img\0" \
++	"mmc_update_uboot=" \
++		"if tftp ${loadaddr} ${image_uboot}; then " \
++			"setexpr cnt ${filesize} / 0x200; " \
++			"setexpr cnt ${cnt} + 1; " \
++			"mmc partconf 0 0 1 1; " \
++			"mmc write ${loadaddr} 0 ${cnt}; " \
++			"mmc partconf 0 0 1 0; " \
++		"fi\0" \
++	"image_kernel=image-kernel.ext4\0" \
++	"mmc_update_kernel=" \
++		"if tftp ${loadaddr} ${image_kernel}; then " \
++			"setexpr cnt ${filesize} / 0x200; " \
++			"setexpr cnt ${cnt} + 1; " \
++			"gpt setenv mmc 0 boot-${bootside}; " \
++			"mmc write ${loadaddr} ${gpt_partition_addr} ${cnt}; " \
++		"fi\0" \
++	"image_rofs=image-rofs.ext4\0" \
++	"mmc_update_rofs=" \
++		"if tftp ${loadaddr} ${image_rofs}; then " \
++			"setexpr cnt ${filesize} / 0x200; " \
++			"setexpr cnt ${cnt} + 1; " \
++			"gpt setenv mmc 0 rofs-${bootside}; " \
++			"mmc write ${loadaddr} ${gpt_partition_addr} ${cnt}; " \
++		"fi\0" \
++	"mmc_factory_init=" \
++		"run do_partitions && " \
++		"run mmc_update_uboot && " \
++		"run mmc_update_kernel && " \
++		"run mmc_update_rofs && " \
++		"setenv rwreset true && " \
++		"saveenv\0" \
++	"setbootargs=setenv bootargs " \
++		"console=ttyS0,115200n8 earlycon " \
++		"rootwait root=PARTLABEL=${rootfs}\0" \
++	"bootside=a\0" \
++	"bootcmd_mmc_a=" \
++		"echo Booting side A...; " \
++		"load mmc 0:2 ${scriptaddr} fitImage; " \
++		"setenv rootfs rofs-a; run setbootargs; " \
++		"bootm ${scriptaddr}; " \
++		"setenv rootfs\0" \
++	"bootcmd_mmc_b=" \
++		"echo Booting side B...; " \
++		"load mmc 0:3 ${scriptaddr} fitImage; " \
++		"setenv rootfs rofs-b; run setbootargs; " \
++		"bootm ${scriptaddr}; " \
++		"setenv rootfs\0" \
++	"bootcmd_mmc=" \
++		"if test ${bootside} = b; then " \
++			"run bootcmd_mmc_b; run bootcmd_mmc_a; " \
++		"else " \
++			"run bootcmd_mmc_a; run bootcmd_mmc_b; " \
++		"fi\0"
++
++/* The rest of the configuration is shared */
++#include <configs/socfpga_common.h>
++
++#endif	/* __CONFIG_SOCFPGA_CYCLONE5_RUNBMC_H__ */
 -- 
 2.25.1
 
 
-From 83fe04251b2ee4adf54adc13c9818f7cfc69a469 Mon Sep 17 00:00:00 2001
+From a159a668c5724a491ae3a6d68e97be31585776df Mon Sep 17 00:00:00 2001
 From: Jan Sowinski <jan.sowinski@intel.com>
 Date: Mon, 10 Feb 2020 17:10:02 +0100
 Subject: [PATCH 2/2] CycloneV RunBMC change boot order to MMC
 
   - Override boot source to MMC for FPGA boot
   - fallback to UART ymodem when primary boot source fails
+
 ---
- arch/arm/mach-socfpga/spl_gen5.c | 11 +++++++++++
- 1 file changed, 11 insertions(+)
+ arch/arm/mach-socfpga/spl_gen5.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
 
 diff --git a/arch/arm/mach-socfpga/spl_gen5.c b/arch/arm/mach-socfpga/spl_gen5.c
-index fc931f2aca..5e66401f22 100644
+index 08b14702a7..f66a779537 100644
 --- a/arch/arm/mach-socfpga/spl_gen5.c
 +++ b/arch/arm/mach-socfpga/spl_gen5.c
-@@ -54,6 +54,17 @@ u32 spl_boot_device(void)
+@@ -54,11 +54,24 @@ u32 spl_boot_device(void)
  	}
  }
  
@@ -1717,8 +1863,15 @@ index fc931f2aca..5e66401f22 100644
 +}
 +
  #ifdef CONFIG_SPL_MMC
- u32 spl_mmc_boot_mode(const u32 boot_device)
+ u32 spl_mmc_boot_mode(struct mmc *mmc, const u32 boot_device)
  {
+ #if defined(CONFIG_SPL_FS_FAT) || defined(CONFIG_SPL_FS_EXT4)
+ 	return MMCSD_MODE_FS;
++#elif defined(CONFIG_SUPPORT_EMMC_BOOT)
++	return MMCSD_MODE_EMMCBOOT;
+ #else
+ 	return MMCSD_MODE_RAW;
+ #endif
 -- 
 2.25.1
 
