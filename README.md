@@ -1,3 +1,13 @@
+# DISCONTINUATION OF SUPPORT FOR THIS PUBLIC DISTRIBUTION OF OPENBMC
+This public distribution of OpenBMC is no longer maintained by Intel.
+This public distribution is not updated to the latest OpenBMC versions and has
+been identified as having known security escapes.
+Intel has ceased development and contributions to this public distribution and
+is not doing any maintenance, bug fixes, new releases, or updates here.
+Intel no longer accepts patches to this public distribution.
+Intel recommends working with an independent firmware vendor for future support
+
+---
 This repository contains reference implementation of Yocto BSP layer used to build OpenBMC\* distribution for Intel® Cyclone® V RunBMC\* card.<br />
 The layer is provided as an example build of OpenBMC* for the card and is not tied to any specific platform. 
 
